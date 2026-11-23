@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Main To Scale — Real-Time Ride Matcher (Bengaluru)</title>
+    <style>
+      :root {
+        --bg: #090d16;
+        --panel: #111827;
+        --panel-soft: #0d1524;
+        --border: #243247;
+        --text: #f8fafc;
+        --muted: #94a3b8;
+        --cyan: #38bdf8;
+        --green: #22c55e;
+        --red: #ff4d5a;
+        --amber: #facc15;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding: 18px;
+        gap: 16px;
+      }
+
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 18px;
+        background: var(--panel);
+        border: 1.5px solid var(--border);
+        border-radius: 14px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-tag {
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(56, 189, 248, 0.14);
+        border: 1px solid var(--cyan);
+        color: var(--cyan);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+
+      h1 {
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+      }
+
+      .status-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .pill {
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        font-weight: 700;
+        border: 1px solid var(--border);
+        background: var(--panel-soft);
+        color: var(--muted);
+      }
+
+      .pill.live {
+        border-color: var(--green);
+        color: #86efac;
+        background: rgba(34, 197, 94, 0.12);
+      }
+
+      .pill.redis {
+        border-color: var(--cyan);
+        color: #bae6fd;
+        background: rgba(56, 189, 248, 0.12);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.65fr) minmax(320px, 1fr);
+        gap: 16px;
+        flex: 1;
+      }
+
+      @media (max-width: 960px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1.5px solid var(--border);
+        border-radius: 16px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .map-wrap {
+        position: relative;
+        flex: 1;
+        min-height: 520px;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        background: #070b13;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      .map-overlay {
+        position: absolute;
+        left: 14px;
+        top: 14px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        pointer-events: none;
+      }
+
+      .hud-chip {
+        padding: 6px 11px;
+        border-radius: 8px;
+        background: rgba(9, 13, 22, 0.88);
+        border: 1px solid var(--border);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        font-weight: 700;
+        color: #e2e8f0;
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      button {
+        cursor: pointer;
+        border: 1.5px solid transparent;
+        border-radius: 10px;
+        padding: 11px 14px;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text);
+        background: var(--panel-soft);
+        transition: transform 0.08s ease, border-color 0.15s ease, background 0.15s ease;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      button.primary {
+        grid-column: 1 / -1;
+        background: rgba(34, 197, 94, 0.18);
+        border-color: var(--green);
+        color: #dcfce7;
+      }
+
+      button.race {
+        background: rgba(56, 189, 248, 0.14);
+        border-color: var(--cyan);
+        color: #e0f2fe;
+      }
+
+      button.rush {
+        background: rgba(255, 77, 90, 0.14);
+        border-color: var(--red);
+        color: #ffe4e6;
+      }
+
+      button.reset {
+        grid-column: 1 / -1;
+        border-color: var(--border);
+        color: var(--muted);
+        font-size: 13px;
+        padding: 9px;
+      }
+
+      .section-title {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .locks-list,
+      .events-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 210px;
+        overflow-y: auto;
+      }
+
+      .lock-item {
+        background: var(--panel-soft);
+        border: 1px solid rgba(34, 197, 94, 0.45);
+        border-radius: 10px;
+        padding: 9px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 13px;
+      }
+
+      .lock-top {
+        display: flex;
+        justify-content: space-between;
+        font-weight: 700;
+      }
+
+      .ttl-bar-bg {
+        height: 6px;
+        border-radius: 999px;
+        background: #1e293b;
+        overflow: hidden;
+      }
+
+      .ttl-bar-fill {
+        height: 100%;
+        background: var(--green);
+        transition: width 0.2s linear;
+      }
+
+      .event-item {
+        background: var(--panel-soft);
+        border-left: 3px solid var(--cyan);
+        border-radius: 6px;
+        padding: 7px 10px;
+        font-size: 13px;
+        line-height: 1.35;
+      }
+
+      .event-item.match { border-left-color: var(--green); }
+      .event-item.alert { border-left-color: var(--red); }
+      .event-item.race { border-left-color: var(--amber); }
+
+      .event-ts {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 11px;
+        color: var(--muted);
+        margin-right: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <span class="brand-tag">MAIN TO SCALE</span>
+        <h1>Real-Time Ride Matcher — Bengaluru (12.9716, 77.5946)</h1>
+      </div>
+      <div class="status-pills">
+        <span id="ws-pill" class="pill">WS CONNECTING...</span>
+        <span id="redis-pill" class="pill redis">REDIS: --</span>
+      </div>
+    </header>
+
+    <div class="grid">
+      <div class="card">
+        <div class="map-wrap">
+          <canvas id="map"></canvas>
+          <div class="map-overlay">
+            <span id="hud-cell" class="hud-chip">H3 RES-9: --</span>
+            <span id="hud-ring" class="hud-chip">RING: k=0</span>
+            <span id="hud-cabs" class="hud-chip">CABS: --</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Dispatch Controls</div>
+        <div class="actions">
+          <button class="primary" onclick="postAction('/api/request-ride')">Request Ride (H3 + 15s Lock)</button>
+          <button class="race" onclick="postAction('/api/race-demo')">Race 2 Riders</button>
+          <button class="rush" onclick="postAction('/api/rush-hour')">Rush Hour (Empty Hex)</button>
+          <button class="reset" onclick="postAction('/api/reset')">Reset Fleet &amp; Clear Locks</button>
+        </div>
+
+        <div class="section-title">Active 15s Redis Locks (nx=True, ex=15)</div>
+        <div id="locks-list" class="locks-list">
+          <div class="pill">No active dispatch locks</div>
+        </div>
+
+        <div class="section-title">Live WebSocket Event Stream</div>
+        <div id="events-list" class="events-list"></div>
+      </div>
+    </div>
+
+    <script>
+      const canvas = document.getElementById("map");
+      const ctx = canvas.getContext("2d");
+      const wsPill = document.getElementById("ws-pill");
+      const redisPill = document.getElementById("redis-pill");
+      const hudCell = document.getElementById("hud-cell");
+      const hudRing = document.getElementById("hud-ring");
+      const hudCabs = document.getElementById("hud-cabs");
+      const locksList = document.getElementById("locks-list");
+      const eventsList = document.getElementById("events-list");
+
+      let latestState = null;
+
+      function resizeCanvas() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.max(400, Math.floor(rect.width * dpr));
+        canvas.height = Math.max(400, Math.floor(rect.height * dpr));
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        if (latestState) drawMap(latestState);
+      }
+
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas();
+
+      async function postAction(path) {
+        try {
+          await fetch(path, { method: "POST" });
+        } catch (err) {
+          console.error("Action failed:", err);
+        }
+      }
+
+      function project(lat, lng, centerLat, centerLng, w, h) {
+        const spanDeg = 0.019;
+        const scale = Math.min(w, h) / spanDeg;
+        const x = w / 2 + (lng - centerLng) * Math.cos((centerLat * Math.PI) / 180) * scale;
+        const y = h / 2 - (lat - centerLat) * scale;
+        return [x, y];
+      }
+
+      function drawMap(state) {
+        const w = canvas.parentElement.clientWidth;
+        const h = canvas.parentElement.clientHeight;
+        const rLat = state.rider.lat;
+        const rLng = state.rider.lng;
+
+        ctx.clearRect(0, 0, w, h);
+
+        // Background street grid
+        ctx.strokeStyle = "#131e31";
+        ctx.lineWidth = 1;
+        for (let gx = 0; gx < w; gx += 48) {
+          ctx.beginPath();
+          ctx.moveTo(gx, 0);
+          ctx.lineTo(gx, h);
+          ctx.stroke();
+        }
+        for (let gy = 0; gy < h; gy += 48) {
+          ctx.beginPath();
+          ctx.moveTo(0, gy);
+          ctx.lineTo(w, gy);
+          ctx.stroke();
+        }
+
+        // Subtle Bengaluru corridor labels
+        const landmarks = [
+          ["Cubbon Park", 12.9756, 77.5920],
+          ["MG Road", 12.9742, 77.6030],
+          ["Richmond Town", 12.9652, 77.5960],
+          ["Ulsoor", 12.9795, 77.6040],
+        ];
+        ctx.font = "600 11px ui-monospace, monospace";
+        ctx.fillStyle = "#475569";
+        for (const [label, lLat, lLng] of landmarks) {
+          const [lx, ly] = project(lLat, lLng, rLat, rLng, w, h);
+          ctx.fillText(label, lx, ly);
+        }
+
+        // Real H3 Resolution-9 hex cells
+        for (const hex of state.hex_cells) {
+          ctx.beginPath();
+          hex.boundary.forEach(([bLat, bLng], idx) => {
+            const [px, py] = project(bLat, bLng, rLat, rLng, w, h);
+            if (idx === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          });
+          ctx.closePath();
+
+          if (hex.ring_k === 0) {
+            ctx.fillStyle = state.rush_hour ? "rgba(255, 77, 90, 0.22)" : "rgba(56, 189, 248, 0.16)";
+            ctx.strokeStyle = state.rush_hour ? "#ff4d5a" : "#38bdf8";
+            ctx.lineWidth = 2.5;
+          } else if (hex.ring_k <= state.active_ring_k) {
+            ctx.fillStyle = hex.ring_k === 1 ? "rgba(56, 189, 248, 0.12)" : "rgba(34, 197, 94, 0.13)";
+            ctx.strokeStyle = hex.ring_k === 1 ? "#38bdf8" : "#22c55e";
+            ctx.lineWidth = 2;
+          } else {
+            ctx.fillStyle = "rgba(15, 23, 42, 0.45)";
+            ctx.strokeStyle = "#243247";
+            ctx.lineWidth = 1.25;
+          }
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        // Moving cabs + WebSocket breadcrumb trails + 15s lock countdown ring
+        for (const cab of state.cabs) {
+          if (cab.trail && cab.trail.length > 1) {
+            for (let i = 0; i < cab.trail.length; i++) {
+              const [tLat, tLng] = cab.trail[i];
+              const [tx, ty] = project(tLat, tLng, rLat, rLng, w, h);
+              const alpha = ((i + 1) / cab.trail.length) * 0.55;
+              ctx.fillStyle = cab.locked_by
+                ? `rgba(34, 197, 94, ${alpha.toFixed(2)})`
+                : `rgba(56, 189, 248, ${alpha.toFixed(2)})`;
+              ctx.beginPath();
+              ctx.arc(tx, ty, 2.5 + (i / cab.trail.length) * 2.5, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+
+          const [cx, cy] = project(cab.lat, cab.lng, rLat, rLng, w, h);
+
+          if (cab.locked_by) {
+            const frac = Math.max(0, Math.min(1, cab.ttl_remaining / 15.0));
+            ctx.strokeStyle = "#1e293b";
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 17, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.strokeStyle = "#22c55e";
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 17, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2);
+            ctx.stroke();
+          }
+
+          ctx.fillStyle = cab.locked_by ? "#22c55e" : "#38bdf8";
+          ctx.beginPath();
+          ctx.arc(cx, cy, cab.locked_by ? 7.5 : 6, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.font = "700 11px ui-monospace, monospace";
+          ctx.fillStyle = cab.locked_by ? "#86efac" : "#cbd5e1";
+          ctx.fillText(cab.cab_id, cx + 10, cy + 4);
+        }
+
+        // Rider pin at Bengaluru center
+        const [rx, ry] = project(rLat, rLng, rLat, rLng, w, h);
+        ctx.strokeStyle = state.rush_hour ? "#ff4d5a" : "#facc15";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(rx, ry, 14, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = "#f8fafc";
+        ctx.beginPath();
+        ctx.arc(rx, ry, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      function renderSidebar(state) {
+        redisPill.textContent = `REDIS: ${state.redis_mode.toUpperCase()}`;
+        hudCell.textContent = `H3 RES-9: ${state.rider.cell}`;
+        hudRing.textContent = state.rush_hour
+          ? `RUSH HOUR · RING k=${state.active_ring_k}`
+          : `RING: grid_disk(k=${state.active_ring_k})`;
+        hudCabs.textContent = `CABS: ${state.cabs.length} LIVE`;
+
+        if (state.active_locks.length === 0) {
+          locksList.innerHTML = '<div class="pill">No active dispatch locks</div>';
+        } else {
+          locksList.innerHTML = state.active_locks
+            .map((lk) => {
+              const pct = Math.max(0, Math.min(100, (lk.ttl_remaining / 15.0) * 100));
+              return `
+                <div class="lock-item">
+                  <div class="lock-top">
+                    <span>${lk.cab_id} &rarr; ${lk.rider_id}</span>
+                    <span style="color:#4ade80">${lk.ttl_remaining.toFixed(1)}s</span>
+                  </div>
+                  <div class="ttl-bar-bg">
+                    <div class="ttl-bar-fill" style="width:${pct.toFixed(1)}%"></div>
+                  </div>
+                </div>
+              `;
+            })
+            .join("");
+        }
+
+        eventsList.innerHTML = state.events
+          .map(
+            (ev) => `
+              <div class="event-item ${ev.kind}">
+                <span class="event-ts">${ev.ts}</span>
+                <span>${ev.message}</span>
+              </div>
+            `
+          )
+          .join("");
+      }
+
+      function connectWS() {
+        const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const ws = new WebSocket(`${proto}//${window.location.host}/ws`);
+        ws.onopen = () => {
+          wsPill.textContent = "WS LIVE · 0 POLLS";
+          wsPill.classList.add("live");
+        };
+        ws.onmessage = (msg) => {
+          latestState = JSON.parse(msg.data);
+          drawMap(latestState);
+          renderSidebar(latestState);
+        };
+        ws.onclose = () => {
+          wsPill.textContent = "WS RECONNECTING...";
+          wsPill.classList.remove("live");
+          setTimeout(connectWS, 1500);
+        };
+      }
+
+      connectWS();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,67 @@
+{
+  "REPO_BASE_URL": "https://github.com/k-u-kiran01/MaintoScale-5Lines-of-main-code-to-scalable-system/tree/main/starter-kits",
+  "channel": {
+    "name": "Main To Scale",
+    "tagline": "Every massive system started as 5 lines of code."
+  },
+  "kits": [
+    {
+      "keyword": "RIDE",
+      "status": "live",
+      "title": "Real-Time Ride Matcher (Uber & Zomato)",
+      "stack": "Python · Uber H3 v4 · Redis Geo & 15s Locks · FastAPI WebSockets",
+      "path": "./ride-matcher-kit/",
+      "zip": "./ride-matcher-starter-kit.zip",
+      "cta": "Open Starter Kit →"
+    },
+    {
+      "keyword": "TICKET",
+      "status": "coming_soon",
+      "title": "Concert Sellout Ticket Backend",
+      "stack": "Python · Load Balancer · Redis Cache · Message Queue · Row Locks · Autoscaling",
+      "path": "./ticket-backend-kit/"
+    },
+    {
+      "keyword": "SCALE",
+      "status": "coming_soon",
+      "title": "2M-Fan Ticket Drop Scaling (Part 2)",
+      "stack": "PgBouncer · Postgres Read Replicas · Event Sharding · Edge Waiting Room",
+      "path": "./ticket-scale-kit/"
+    },
+    {
+      "keyword": "GIT",
+      "status": "coming_soon",
+      "title": "Build Mini-Git From Scratch",
+      "stack": "Python · SHA-256 Blobs · Commit DAG · Branch Pointers · 3-Way Merge Base",
+      "path": "./mini-git-kit/"
+    },
+    {
+      "keyword": "CHAT",
+      "status": "coming_soon",
+      "title": "WhatsApp-Style Real-Time Chat",
+      "stack": "Python · Persistent WebSockets · Redis Offline Queue · Receipts · E2E Encryption",
+      "path": "./whatsapp-chat-kit/"
+    },
+    {
+      "keyword": "STREAM",
+      "status": "coming_soon",
+      "title": "Netflix & YouTube Video Streaming",
+      "stack": "Python · HLS 4s Chunking · Adaptive Bitrate (ABR) · Edge CDN · Prefetch Buffer",
+      "path": "./video-streaming-kit/"
+    },
+    {
+      "keyword": "AUDIO",
+      "status": "coming_soon",
+      "title": "Shazam Audio Fingerprinting",
+      "stack": "Python · FFT Spectrogram · Peak Constellation · Anchor-Target Hashes · Inverted Index",
+      "path": "./shazam-audio-kit/"
+    },
+    {
+      "keyword": "LIMIT",
+      "status": "coming_soon",
+      "title": "Production API Rate Limiter",
+      "stack": "Python · Redis Counters · Token Bucket · Atomic Lua Scripts · Retry-After",
+      "path": "./rate-limiter-kit/"
+    }
+  ]
+}
