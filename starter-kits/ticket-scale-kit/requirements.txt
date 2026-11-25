@@ -1,0 +1,6 @@
+SQLAlchemy==2.1.9
+redis==8.1.0
+fakeredis==2.40.0
+fastapi==0.165.0
+uvicorn==0.54.0
+websockets==17.4

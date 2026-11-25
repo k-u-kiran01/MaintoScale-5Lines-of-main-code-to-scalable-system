@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Main To Scale — 2M-Fan Ticket Drop Scaling (Part 2)</title>
+    <style>
+      :root {
+        --bg: #090d16;
+        --panel: #111827;
+        --panel-soft: #0d1524;
+        --border: #243247;
+        --text: #f8fafc;
+        --muted: #94a3b8;
+        --cyan: #38bdf8;
+        --green: #22c55e;
+        --red: #ff4d5a;
+        --amber: #facc15;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding: 16px;
+        gap: 14px;
+      }
+
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 18px;
+        background: var(--panel);
+        border: 1.5px solid var(--border);
+        border-radius: 14px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-tag {
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(56, 189, 248, 0.14);
+        border: 1px solid var(--cyan);
+        color: var(--cyan);
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+
+      h1 {
+        font-size: 19px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+      }
+
+      .status-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .pill {
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 700;
+        border: 1px solid var(--border);
+        background: var(--panel-soft);
+        color: var(--muted);
+      }
+
+      .pill.live {
+        border-color: var(--green);
+        color: #86efac;
+        background: rgba(34, 197, 94, 0.14);
+      }
+
+      .pill.cyan {
+        border-color: var(--cyan);
+        color: #bae6fd;
+        background: rgba(56, 189, 248, 0.14);
+      }
+
+      .pill.amber {
+        border-color: var(--amber);
+        color: #fef08a;
+        background: rgba(250, 204, 21, 0.14);
+      }
+
+      .pill.warn {
+        border-color: var(--red);
+        color: #fecdd3;
+        background: rgba(255, 77, 90, 0.16);
+      }
+
+      .presets-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 12px 14px;
+        background: var(--panel);
+        border: 1.5px solid var(--border);
+        border-radius: 14px;
+        align-items: center;
+      }
+
+      .presets-label {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--muted);
+        margin-right: 4px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      button {
+        font-family: var(--sans);
+        cursor: pointer;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: var(--panel-soft);
+        color: var(--text);
+        padding: 8px 13px;
+        font-size: 13px;
+        font-weight: 700;
+        transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+      }
+
+      button:hover {
+        border-color: var(--cyan);
+        background: rgba(56, 189, 248, 0.12);
+      }
+
+      button:active {
+        transform: translateY(1px);
+      }
+
+      button.primary {
+        border-color: rgba(34, 197, 94, 0.65);
+        background: rgba(34, 197, 94, 0.16);
+        color: #bbf7d0;
+      }
+
+      button.danger {
+        border-color: rgba(255, 77, 90, 0.65);
+        background: rgba(255, 77, 90, 0.16);
+        color: #fecdd3;
+      }
+
+      .pipeline {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(170px, 1fr));
+        gap: 12px;
+      }
+
+      @media (max-width: 1100px) {
+        .pipeline {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 640px) {
+        .pipeline {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .node-card {
+        background: var(--panel);
+        border: 1.5px solid var(--border);
+        border-radius: 14px;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .node-card.ok {
+        border-color: rgba(34, 197, 94, 0.72);
+        box-shadow: 0 0 18px rgba(34, 197, 94, 0.12);
+      }
+
+      .node-card.cyan {
+        border-color: rgba(56, 189, 248, 0.72);
+        box-shadow: 0 0 18px rgba(56, 189, 248, 0.12);
+      }
+
+      .node-card.bad {
+        border-color: rgba(255, 77, 90, 0.85);
+        box-shadow: 0 0 20px rgba(255, 77, 90, 0.16);
+      }
+
+      .node-card.warn {
+        border-color: rgba(250, 204, 21, 0.72);
+      }
+
+      .node-title {
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+        text-transform: uppercase;
+      }
+
+      .node-metric {
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+
+      .node-sub {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .bar-track {
+        height: 8px;
+        border-radius: 999px;
+        background: #0a101d;
+        border: 1px solid var(--border);
+        overflow: hidden;
+      }
+
+      .bar-fill {
+        height: 100%;
+        width: 0%;
+        transition: width 0.25s ease, background 0.25s ease;
+        background: var(--cyan);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        flex: 1;
+      }
+
+      @media (max-width: 1080px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1.5px solid var(--border);
+        border-radius: 14px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .panel h2 {
+        font-size: 15px;
+        font-weight: 800;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: var(--panel-soft);
+        border: 1px solid var(--border);
+      }
+
+      .toggle-info strong {
+        display: block;
+        font-size: 13px;
+      }
+
+      .toggle-info span {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .switch-btn {
+        min-width: 68px;
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+
+      .switch-btn.on {
+        border-color: var(--green);
+        background: rgba(34, 197, 94, 0.18);
+        color: #86efac;
+      }
+
+      .switch-btn.off {
+        border-color: rgba(255, 77, 90, 0.55);
+        background: rgba(255, 77, 90, 0.12);
+        color: #fecdd3;
+      }
+
+      .row-inputs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+
+      select,
+      input[type="text"] {
+        background: var(--panel-soft);
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 9px;
+        padding: 8px 10px;
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+
+      pre.output-box {
+        background: #070b13;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px;
+        font-family: var(--mono);
+        font-size: 12px;
+        line-height: 1.45;
+        color: #cbd5e1;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .event-log {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 290px;
+        overflow-y: auto;
+      }
+
+      .event-item {
+        padding: 8px 10px;
+        border-radius: 9px;
+        background: var(--panel-soft);
+        border: 1px solid var(--border);
+        font-family: var(--mono);
+        font-size: 11.5px;
+        line-height: 1.4;
+      }
+
+      .event-kind {
+        font-weight: 800;
+        color: var(--cyan);
+        margin-right: 6px;
+      }
+
+      .stats-mini {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .stat-box {
+        background: var(--panel-soft);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px;
+        text-align: center;
+      }
+
+      .stat-box .num {
+        font-family: var(--mono);
+        font-size: 18px;
+        font-weight: 800;
+      }
+
+      .stat-box .lbl {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <span class="brand-tag">SCALE · PART 2</span>
+        <h1>2M-Fan Ticket Drop Scaling Control Plane</h1>
+      </div>
+      <div class="status-pills">
+        <span class="pill cyan" id="pill-redis">Redis: connecting…</span>
+        <span class="pill" id="pill-ws">WS: connecting…</span>
+        <span class="pill warn" id="pill-overall">MELTDOWN</span>
+      </div>
+    </header>
+
+    <div class="presets-bar">
+      <span class="presets-label">Story Presets:</span>
+      <button class="danger" onclick="applyPreset('ddos')">Beat 1: 50-Pod DDoS</button>
+      <button onclick="applyPreset('pgbouncer')">Beat 2: +PgBouncer</button>
+      <button onclick="applyPreset('replicas')">Beat 3: +Read Replicas</button>
+      <button onclick="applyPreset('sharding')">Beat 4: +Event Sharding</button>
+      <button class="primary" onclick="applyPreset('full_shield')">Beat 5: +Edge Shield (2M Fans)</button>
+    </div>
+
+    <section class="pipeline">
+      <div class="node-card" id="card-edge">
+        <div class="node-title">1. CDN Edge Gate</div>
+        <div class="node-metric" id="val-edge">NO SHIELD</div>
+        <div class="node-sub" id="sub-edge">2,000,000 req/s hitting origin</div>
+        <div class="bar-track"><div class="bar-fill" id="bar-edge"></div></div>
+      </div>
+
+      <div class="node-card" id="card-pods">
+        <div class="node-title">2. 50 Autoscaled Pods</div>
+        <div class="node-metric" id="val-pods">1,000 CONNS</div>
+        <div class="node-sub" id="sub-pods">50 pods × pool_size=20</div>
+        <div class="bar-track"><div class="bar-fill" id="bar-pods"></div></div>
+      </div>
+
+      <div class="node-card" id="card-pgb">
+        <div class="node-title">3. PgBouncer + Primary</div>
+        <div class="node-metric" id="val-pgb">100 / 100</div>
+        <div class="node-sub" id="sub-pgb">FATAL: too many clients</div>
+        <div class="bar-track"><div class="bar-fill" id="bar-pgb"></div></div>
+      </div>
+
+      <div class="node-card" id="card-rep">
+        <div class="node-title">4. Read / Write Split</div>
+        <div class="node-metric" id="val-rep">4800 ms p95</div>
+        <div class="node-sub" id="sub-rep">ALL traffic on Primary</div>
+        <div class="bar-track"><div class="bar-fill" id="bar-rep"></div></div>
+      </div>
+
+      <div class="node-card" id="card-shard">
+        <div class="node-title">5. Redis &amp; PG Shards</div>
+        <div class="node-metric" id="val-shard">CPU 100%</div>
+        <div class="node-sub" id="sub-shard">Event A/B/C on 1 hot node</div>
+        <div class="bar-track"><div class="bar-fill" id="bar-shard"></div></div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="panel">
+        <h2>
+          <span>Defense Layers</span>
+          <span class="pill" id="pods-readout">50 Pods</span>
+        </h2>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <strong>2M-Fan Refresh Storm</strong>
+            <span>Simulate 2,000,000 fans hammering refresh</span>
+          </div>
+          <button class="switch-btn off" id="btn-fan_storm" onclick="toggleKey('fan_storm')">OFF</button>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <strong>PgBouncer (`pgbouncer.ini`)</strong>
+            <span>pool_mode = transaction · default_pool_size = 40</span>
+          </div>
+          <button class="switch-btn off" id="btn-pgbouncer" onclick="toggleKey('pgbouncer')">OFF</button>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <strong>Read Replicas (`seats.py`)</strong>
+            <span>Route 90% browsing to replica_db</span>
+          </div>
+          <button class="switch-btn off" id="btn-read_replicas" onclick="toggleKey('read_replicas')">OFF</button>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <strong>Event-ID Sharding (`shard.py`)</strong>
+            <span>db_shards[event_id % 8] + {%d}:seats</span>
+          </div>
+          <button class="switch-btn off" id="btn-sharding" onclick="toggleKey('sharding')">OFF</button>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <strong>CDN Edge Waiting Room (`edge_gate.ts`)</strong>
+            <span>verifyQueueToken(req) · drip 5,000/s</span>
+          </div>
+          <button class="switch-btn off" id="btn-edge_waiting_room" onclick="toggleKey('edge_waiting_room')">OFF</button>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <strong>Worker Pods (`pool_size = 20`)</strong>
+            <span>Scale worker pods from 5 to 50</span>
+          </div>
+          <input type="range" id="slider-pods" min="5" max="50" step="5" value="50" onchange="setPods(this.value)" />
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>
+          <span>Live Edge Token &amp; Checkout Tester</span>
+          <span class="pill cyan" id="token-badge">No Token</span>
+        </h2>
+
+        <div class="row-inputs">
+          <label for="event-select" style="font-size:12px;color:var(--muted);">Show:</label>
+          <select id="event-select">
+            <option value="101">Event 101 (Stadium Drop)</option>
+            <option value="102">Event 102 (Comedy Show)</option>
+            <option value="103">Event 103 (Indie Tour)</option>
+          </select>
+          <input type="text" id="uid-input" value="buyer_42" style="width:110px;" />
+        </div>
+
+        <div class="row-inputs">
+          <button onclick="mintToken()">Mint Signed Token (HMAC)</button>
+          <button class="primary" onclick="bookSeat(true)">Book WITH Token</button>
+          <button class="danger" onclick="bookSeat(false)">Request WITHOUT Token</button>
+        </div>
+
+        <pre class="output-box" id="api-output">Click "Mint Signed Token" or "Book WITH Token" to test live API routing against FastAPI + Redis.</pre>
+
+        <div class="stats-mini">
+          <div class="stat-box">
+            <div class="num" id="cnt-200" style="color:var(--green);">0</div>
+            <div class="lbl">200 BOOKED</div>
+          </div>
+          <div class="stat-box">
+            <div class="num" id="cnt-202" style="color:var(--cyan);">0</div>
+            <div class="lbl">202 WAITING</div>
+          </div>
+          <div class="stat-box">
+            <div class="num" id="cnt-503" style="color:var(--red);">0</div>
+            <div class="lbl">503 MELT/FATAL</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>
+          <span>Live Telemetry &amp; Event Log</span>
+          <span class="pill" id="seats-pill">Event 101: —</span>
+        </h2>
+        <div class="event-log" id="event-log"></div>
+      </div>
+    </section>
+
+    <script>
+      let currentConfig = {};
+      let activeToken = "";
+
+      function setNodeClass(id, cls) {
+        const el = document.getElementById(id);
+        el.className = "node-card " + cls;
+      }
+
+      function setBar(id, pct, color) {
+        const el = document.getElementById(id);
+        el.style.width = Math.max(4, Math.min(100, pct)) + "%";
+        el.style.background = color;
+      }
+
+      function renderState(data) {
+        if (!data || !data.config || !data.metrics) return;
+        currentConfig = data.config;
+        const m = data.metrics;
+        const c = data.config;
+
+        document.getElementById("pill-redis").textContent = "Redis: " + data.redis_mode;
+        const overall = document.getElementById("pill-overall");
+        overall.textContent = data.overall_status;
+        overall.className =
+          "pill " +
+          (data.overall_status === "MELTDOWN"
+            ? "warn"
+            : data.overall_status === "DEGRADED"
+              ? "amber"
+              : "live");
+
+        // Edge node
+        if (c.edge_waiting_room) {
+          setNodeClass("card-edge", "cyan");
+          document.getElementById("val-edge").textContent = "DRIP 5K/s";
+          document.getElementById("sub-edge").textContent =
+            "Queued: " + m.edge_queue_depth.toLocaleString() + " · BW " + m.origin_bw_pct + "%";
+          setBar("bar-edge", m.origin_bw_pct, "#38bdf8");
+        } else if (c.fan_storm) {
+          setNodeClass("card-edge", "bad");
+          document.getElementById("val-edge").textContent = "100% BW MELT";
+          document.getElementById("sub-edge").textContent = "2,000,000 req/s raw storm";
+          setBar("bar-edge", 100, "#ff4d5a");
+        } else {
+          setNodeClass("card-edge", "warn");
+          document.getElementById("val-edge").textContent = "UNPROTECTED";
+          document.getElementById("sub-edge").textContent = m.origin_req_sec.toLocaleString() + " req/s · BW " + m.origin_bw_pct + "%";
+          setBar("bar-edge", m.origin_bw_pct, "#facc15");
+        }
+
+        // Pods node
+        document.getElementById("val-pods").textContent = m.worker_connections.toLocaleString() + " CONNS";
+        document.getElementById("sub-pods").textContent = c.pods + " pods × pool_size=" + c.pool_size;
+        document.getElementById("pods-readout").textContent = c.pods + " Pods";
+        document.getElementById("slider-pods").value = c.pods;
+        setNodeClass("card-pods", c.pgbouncer ? "ok" : m.fatal_errors_per_sec > 0 ? "bad" : "warn");
+        setBar("bar-pods", (m.worker_connections / 1000) * 100, c.pgbouncer ? "#22c55e" : "#ff4d5a");
+
+        // PgBouncer node
+        if (m.fatal_errors_per_sec > 0) {
+          setNodeClass("card-pgb", "bad");
+          document.getElementById("val-pgb").textContent = m.fatal_errors_per_sec + " FATAL/s";
+          document.getElementById("sub-pgb").textContent = m.pg_status;
+          setBar("bar-pgb", 100, "#ff4d5a");
+        } else {
+          setNodeClass("card-pgb", c.pgbouncer ? "ok" : "warn");
+          document.getElementById("val-pgb").textContent = m.pg_active_connections + " / " + m.pgbouncer_pool_size + " POOL";
+          document.getElementById("sub-pgb").textContent = c.pgbouncer ? "Transaction pooling HEALTHY" : "Direct to Primary";
+          setBar("bar-pgb", (m.pg_active_connections / m.pg_max_connections) * 100, "#22c55e");
+        }
+
+        // Replicas node
+        document.getElementById("val-rep").textContent = m.checkout_p95_ms + " ms p95";
+        if (c.read_replicas) {
+          setNodeClass("card-rep", m.checkout_p95_ms <= 60 ? "ok" : "cyan");
+          document.getElementById("sub-rep").textContent =
+            "PRI " + m.primary_qps.toLocaleString() + "/s · REP " + m.replica_qps.toLocaleString() + "/s";
+          setBar("bar-rep", Math.min(100, (m.checkout_p95_ms / 500) * 100), "#22c55e");
+        } else {
+          setNodeClass("card-rep", "bad");
+          document.getElementById("sub-rep").textContent = "90% reads starving Primary writes";
+          setBar("bar-rep", 95, "#ff4d5a");
+        }
+
+        // Shard node
+        document.getElementById("val-shard").textContent = "CPU " + m.redis_cpu_pct + "%";
+        if (c.sharding) {
+          setNodeClass("card-shard", m.redis_cpu_pct <= 50 ? "ok" : "warn");
+          document.getElementById("sub-shard").textContent =
+            "A:" + m.shard_cpu.event_a + "% B:" + m.shard_cpu.event_b + "% C:" + m.shard_cpu.event_c + "% (8 shards)";
+          setBar("bar-shard", m.redis_cpu_pct, m.redis_cpu_pct <= 50 ? "#22c55e" : "#facc15");
+        } else {
+          setNodeClass("card-shard", "bad");
+          document.getElementById("sub-shard").textContent = "1 hot node pegged for all events";
+          setBar("bar-shard", m.redis_cpu_pct, "#ff4d5a");
+        }
+
+        // Buttons
+        ["fan_storm", "pgbouncer", "read_replicas", "sharding", "edge_waiting_room"].forEach((k) => {
+          const btn = document.getElementById("btn-" + k);
+          const on = Boolean(c[k]);
+          btn.textContent = on ? "ON" : "OFF";
+          btn.className = "switch-btn " + (on ? "on" : "off");
+        });
+
+        // Counters & Event 101 seats
+        document.getElementById("cnt-200").textContent = data.counters.http_200;
+        document.getElementById("cnt-202").textContent = data.counters.http_202;
+        document.getElementById("cnt-503").textContent = data.counters.http_503;
+        document.getElementById("seats-pill").textContent =
+          "Event 101: " + ((m.seats && m.seats["101"]) || 0).toLocaleString() + " seats";
+
+        // Logs
+        const logEl = document.getElementById("event-log");
+        logEl.innerHTML = "";
+        (data.events || []).forEach((ev) => {
+          const div = document.createElement("div");
+          div.className = "event-item";
+          const kSpan = document.createElement("span");
+          kSpan.className = "event-kind";
+          kSpan.textContent = "[" + ev.kind + "]";
+          div.appendChild(kSpan);
+          div.appendChild(document.createTextNode(ev.msg));
+          logEl.appendChild(div);
+        });
+      }
+
+      async function applyPreset(presetId) {
+        const resp = await fetch("/api/preset/" + presetId, { method: "POST" });
+        renderState(await resp.json());
+      }
+
+      async function toggleKey(key) {
+        const body = {};
+        body[key] = !Boolean(currentConfig[key]);
+        const resp = await fetch("/api/config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        renderState(await resp.json());
+      }
+
+      async function setPods(val) {
+        const resp = await fetch("/api/config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pods: Number(val) }),
+        });
+        renderState(await resp.json());
+      }
+
+      async function mintToken() {
+        const uid = document.getElementById("uid-input").value || "buyer_42";
+        const resp = await fetch("/api/token?uid=" + encodeURIComponent(uid), { method: "POST" });
+        const data = await resp.json();
+        activeToken = data.token;
+        document.getElementById("token-badge").textContent = "HMAC Token Ready";
+        document.getElementById("api-output").textContent = JSON.stringify(data, null, 2);
+      }
+
+      async function bookSeat(useToken) {
+        const eventId = Number(document.getElementById("event-select").value || 101);
+        const uid = document.getElementById("uid-input").value || "buyer_42";
+        const headers = { "Content-Type": "application/json" };
+        if (useToken && activeToken) {
+          headers["X-Queue-Token"] = activeToken;
+        }
+        const resp = await fetch("/api/book", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ event_id: eventId, uid }),
+        });
+        const data = await resp.json();
+        document.getElementById("api-output").textContent =
+          "HTTP " + resp.status + "\n" + JSON.stringify(data, null, 2);
+      }
+
+      function connectWS() {
+        const proto = window.location.protocol === "https:" ? "wss://" : "ws://";
+        const ws = new WebSocket(proto + window.location.host + "/ws/metrics");
+        const wsPill = document.getElementById("pill-ws");
+
+        ws.onopen = () => {
+          wsPill.textContent = "WS: live";
+          wsPill.className = "pill live";
+        };
+        ws.onmessage = (evt) => {
+          renderState(JSON.parse(evt.data));
+        };
+        ws.onclose = () => {
+          wsPill.textContent = "WS: reconnecting";
+          wsPill.className = "pill warn";
+          setTimeout(connectWS, 1500);
+        };
+      }
+
+      fetch("/api/state")
+        .then((r) => r.json())
+        .then(renderState)
+        .catch(() => {});
+      connectWS();
+    </script>
+  </body>
+</html>

@@ -23,10 +23,12 @@
     },
     {
       "keyword": "SCALE",
-      "status": "coming_soon",
+      "status": "live",
       "title": "2M-Fan Ticket Drop Scaling (Part 2)",
       "stack": "PgBouncer · Postgres Read Replicas · Event Sharding · Edge Waiting Room",
-      "path": "./ticket-scale-kit/"
+      "path": "./ticket-scale-kit/",
+      "zip": "./ticket-scale-starter-kit.zip",
+      "cta": "Open Starter Kit →"
     },
     {
       "keyword": "GIT",
