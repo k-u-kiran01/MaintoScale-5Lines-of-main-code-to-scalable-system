@@ -37,10 +37,12 @@
     },
     {
       "keyword": "CHAT",
-      "status": "coming_soon",
+      "status": "live",
       "title": "WhatsApp-Style Real-Time Chat",
       "stack": "Python · Persistent WebSockets · Redis Offline Queue · Receipts · E2E Encryption",
-      "path": "./whatsapp-chat-kit/"
+      "path": "./whatsapp-chat-kit/",
+      "zip": "./whatsapp-chat-starter-kit.zip",
+      "cta": "Open Starter Kit →"
     },
     {
       "keyword": "STREAM",

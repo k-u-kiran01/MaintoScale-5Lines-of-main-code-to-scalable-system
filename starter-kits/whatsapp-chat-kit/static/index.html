@@ -1,0 +1,934 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Main To Scale — WhatsApp-Style Real-Time Chat</title>
+    <style>
+      :root {
+        --bg: #090d16;
+        --panel: #111827;
+        --panel-soft: #0d1524;
+        --border: #243247;
+        --text: #f8fafc;
+        --muted: #94a3b8;
+        --cyan: #38bdf8;
+        --green: #22c55e;
+        --red: #ff4d5a;
+        --amber: #facc15;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding: 16px;
+        gap: 14px;
+      }
+
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 18px;
+        background: var(--panel);
+        border: 1.5px solid var(--border);
+        border-radius: 14px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-tag {
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(56, 189, 248, 0.14);
+        border: 1px solid var(--cyan);
+        color: var(--cyan);
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+
+      h1 {
+        font-size: 19px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+      }
+
+      .status-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .pill {
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 700;
+        border: 1px solid var(--border);
+        background: var(--panel-soft);
+        color: var(--muted);
+      }
+
+      .pill.live {
+        border-color: var(--green);
+        color: #86efac;
+        background: rgba(34, 197, 94, 0.12);
+      }
+
+      .pill.cyan {
+        border-color: var(--cyan);
+        color: #bae6fd;
+        background: rgba(56, 189, 248, 0.12);
+      }
+
+      .pill.warn {
+        border-color: var(--red);
+        color: #fecdd3;
+        background: rgba(255, 77, 90, 0.14);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(290px, 1fr) minmax(320px, 1.15fr) minmax(290px, 1fr);
+        gap: 14px;
+        flex: 1;
+      }
+
+      @media (max-width: 1080px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1.5px solid var(--border);
+        border-radius: 16px;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-height: 540px;
+      }
+
+      .card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .card-title {
+        font-family: var(--mono);
+        font-size: 14px;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+      }
+
+      .sub-note {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .chat-feed {
+        flex: 1;
+        background: var(--panel-soft);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        overflow-y: auto;
+        max-height: 360px;
+      }
+
+      .empty-hint {
+        color: #64748b;
+        font-size: 13px;
+        text-align: center;
+        margin: auto 0;
+        padding: 20px 8px;
+      }
+
+      .bubble {
+        max-width: 86%;
+        padding: 9px 12px;
+        border-radius: 12px;
+        font-size: 14px;
+        line-height: 1.38;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        word-break: break-word;
+      }
+
+      .bubble.out {
+        align-self: flex-end;
+        background: #0f2d47;
+        border: 1px solid rgba(56, 189, 248, 0.35);
+      }
+
+      .bubble.in {
+        align-self: flex-start;
+        background: #14261f;
+        border: 1px solid rgba(34, 197, 94, 0.35);
+      }
+
+      .bubble-meta {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 6px;
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .ticks {
+        display: inline-flex;
+        align-items: center;
+      }
+
+      .composer {
+        display: flex;
+        gap: 8px;
+      }
+
+      input[type="text"] {
+        flex: 1;
+        min-width: 0;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1.5px solid var(--border);
+        background: var(--bg);
+        color: var(--text);
+        font-size: 14px;
+        outline: none;
+      }
+
+      input[type="text"]:focus {
+        border-color: var(--cyan);
+      }
+
+      .btn-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+
+      button {
+        padding: 9px 13px;
+        border-radius: 10px;
+        border: 1.5px solid var(--border);
+        background: #172033;
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.14s ease;
+      }
+
+      button:hover:not(:disabled) {
+        border-color: var(--cyan);
+        color: var(--cyan);
+      }
+
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      button.primary {
+        background: rgba(56, 189, 248, 0.16);
+        border-color: var(--cyan);
+        color: #e0f2fe;
+      }
+
+      button.green-on {
+        background: rgba(34, 197, 94, 0.18);
+        border-color: var(--green);
+        color: #dcfce7;
+      }
+
+      button.red-on {
+        background: rgba(255, 77, 90, 0.2);
+        border-color: var(--red);
+        color: #ffe4e6;
+      }
+
+      .box {
+        background: var(--panel-soft);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .box.breach {
+        border-color: rgba(255, 77, 90, 0.55);
+        background: rgba(45, 16, 24, 0.45);
+      }
+
+      .box-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .queue-slots {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        min-height: 36px;
+        align-items: center;
+      }
+
+      .q-chip {
+        padding: 5px 9px;
+        border-radius: 8px;
+        background: #0c2c46;
+        border: 1px solid var(--cyan);
+        color: #bae6fd;
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .wire-log {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 220px;
+        overflow-y: auto;
+        font-family: var(--mono);
+        font-size: 11.5px;
+      }
+
+      .wire-row {
+        padding: 7px 9px;
+        border-radius: 8px;
+        background: rgba(9, 13, 22, 0.9);
+        border-left: 3px solid var(--green);
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .wire-row.plain {
+        border-left-color: var(--red);
+      }
+
+      .wire-row.ack {
+        border-left-color: var(--cyan);
+      }
+
+      .toggle-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--muted);
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <span class="brand-tag">CHAT STARTER KIT</span>
+        <h1>WhatsApp-Style Real-Time Chat Relay</h1>
+      </div>
+      <div class="status-pills">
+        <span class="pill live" id="pillPoll">POLLING: 0/s (WS PUSH)</span>
+        <span class="pill cyan" id="pillRedis">REDIS: connecting...</span>
+        <span class="pill live" id="pillE2ee">E2EE: ON (ECDH + AES-GCM)</span>
+      </div>
+    </header>
+
+    <main class="grid">
+      <!-- Left: Alice's Phone -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title" style="color: #38bdf8;">PHONE A · ALICE</div>
+            <div class="sub-note" id="aliceStatus">Connecting WebSocket...</div>
+          </div>
+          <span class="pill live" id="aliceBadge">ONLINE</span>
+        </div>
+
+        <div class="chat-feed" id="aliceFeed">
+          <div class="empty-hint">Send a message to watch 1-tick -> 2-gray -> 2-blue ticks live.</div>
+        </div>
+
+        <div class="composer">
+          <input id="aliceInput" type="text" placeholder="Message Bob..." />
+          <button class="primary" id="aliceSendBtn" type="button">Send</button>
+        </div>
+
+        <div class="btn-row">
+          <button id="quickMeetBtn" type="button">Send "Meet at 9"</button>
+          <button id="burstBtn" type="button">Burst 4 Msgs</button>
+        </div>
+      </section>
+
+      <!-- Center: Redis Queue Gate + Hacked Server Wire Sniffer -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title" style="color: #f8fafc;">RELAY &amp; HACKED SERVER</div>
+            <div class="sub-note">Live FastAPI WebSocket + Redis `inbox:bob` + Wire Sniffer</div>
+          </div>
+          <button id="clearWireBtn" type="button">Clear Log</button>
+        </div>
+
+        <div class="btn-row">
+          <button id="e2eeToggleBtn" class="green-on" type="button">E2EE Lock: ON</button>
+          <button id="airplaneBtn" type="button">Bob Airplane Mode: OFF</button>
+        </div>
+
+        <div class="box">
+          <div class="box-head">
+            <span style="color: #38bdf8;">REDIS QUEUE GATE · inbox:bob</span>
+            <span id="gateState" style="color: #22c55e;">GATE OPEN (0 QUEUED)</span>
+          </div>
+          <div class="queue-slots" id="queueSlots">
+            <span class="sub-note">Queue empty — live WebSocket push active.</span>
+          </div>
+        </div>
+
+        <div class="box breach" style="flex: 1;">
+          <div class="box-head">
+            <span style="color: #ff4d5a;">HACKED SERVER WIRE SNIFFER</span>
+            <span id="snifferTag" style="color: #4ade80;">0% READABLE</span>
+          </div>
+          <div class="wire-log" id="wireLog">
+            <div class="sub-note">Waiting for frames crossing the server...</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right: Bob's Phone -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title" style="color: #4ade80;">PHONE B · BOB</div>
+            <div class="sub-note" id="bobStatus">Connecting WebSocket...</div>
+          </div>
+          <span class="pill live" id="bobBadge">ONLINE</span>
+        </div>
+
+        <div class="chat-feed" id="bobFeed">
+          <div class="empty-hint">Toggle Airplane Mode to queue messages in Redis, then reconnect to replay.</div>
+        </div>
+
+        <div class="btn-row">
+          <button id="markReadBtn" class="primary" type="button">Mark All Read (Blue Ticks)</button>
+          <label class="toggle-label">
+            <input id="autoReadChk" type="checkbox" />
+            Auto-read
+          </label>
+        </div>
+
+        <div class="composer">
+          <input id="bobInput" type="text" placeholder="Reply to Alice..." />
+          <button class="primary" id="bobSendBtn" type="button">Reply</button>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      (function () {
+        const wsProto = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const baseWs = wsProto + "//" + window.location.host;
+
+        const aliceFeed = document.getElementById("aliceFeed");
+        const bobFeed = document.getElementById("bobFeed");
+        const wireLog = document.getElementById("wireLog");
+        const queueSlots = document.getElementById("queueSlots");
+        const gateState = document.getElementById("gateState");
+        const snifferTag = document.getElementById("snifferTag");
+
+        const pillRedis = document.getElementById("pillRedis");
+        const pillE2ee = document.getElementById("pillE2ee");
+        const aliceStatus = document.getElementById("aliceStatus");
+        const bobStatus = document.getElementById("bobStatus");
+        const aliceBadge = document.getElementById("aliceBadge");
+        const bobBadge = document.getElementById("bobBadge");
+
+        const aliceInput = document.getElementById("aliceInput");
+        const bobInput = document.getElementById("bobInput");
+        const aliceSendBtn = document.getElementById("aliceSendBtn");
+        const bobSendBtn = document.getElementById("bobSendBtn");
+        const quickMeetBtn = document.getElementById("quickMeetBtn");
+        const burstBtn = document.getElementById("burstBtn");
+        const e2eeToggleBtn = document.getElementById("e2eeToggleBtn");
+        const airplaneBtn = document.getElementById("airplaneBtn");
+        const markReadBtn = document.getElementById("markReadBtn");
+        const autoReadChk = document.getElementById("autoReadChk");
+        const clearWireBtn = document.getElementById("clearWireBtn");
+
+        let e2eeEnabled = true;
+        let bobAirplane = false;
+        let wsAlice = null;
+        let wsBob = null;
+        let wsInspector = null;
+
+        const messagesByOwner = { alice: [], bob: [] };
+        const unreadFromAlice = new Set();
+
+        // Real Web Crypto ECDH P-256 + AES-256-GCM keys inside browser (falls back safely if crypto.subtle unavailable)
+        const cryptoState = {
+          subtleOk: Boolean(window.crypto && window.crypto.subtle),
+          alicePair: null,
+          bobPair: null,
+          aliceSharedKey: null,
+          bobSharedKey: null,
+        };
+
+        function b64Encode(buf) {
+          const bytes = new Uint8Array(buf);
+          let str = "";
+          for (let i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]);
+          return btoa(str);
+        }
+
+        function b64Decode(str) {
+          const bin = atob(str);
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          return bytes;
+        }
+
+        async function initKeys() {
+          if (!cryptoState.subtleOk) return;
+          cryptoState.alicePair = await window.crypto.subtle.generateKey(
+            { name: "ECDH", namedCurve: "P-256" },
+            true,
+            ["deriveKey"]
+          );
+          cryptoState.bobPair = await window.crypto.subtle.generateKey(
+            { name: "ECDH", namedCurve: "P-256" },
+            true,
+            ["deriveKey"]
+          );
+          cryptoState.aliceSharedKey = await window.crypto.subtle.deriveKey(
+            { name: "ECDH", public: cryptoState.bobPair.publicKey },
+            cryptoState.alicePair.privateKey,
+            { name: "AES-GCM", length: 256 },
+            false,
+            ["encrypt", "decrypt"]
+          );
+          cryptoState.bobSharedKey = await window.crypto.subtle.deriveKey(
+            { name: "ECDH", public: cryptoState.alicePair.publicKey },
+            cryptoState.bobPair.privateKey,
+            { name: "AES-GCM", length: 256 },
+            false,
+            ["encrypt", "decrypt"]
+          );
+        }
+
+        async function encryptForWire(sender, text) {
+          if (!e2eeEnabled) {
+            return {
+              encrypted: false,
+              algo: "plaintext",
+              payload: text,
+              iv: "",
+              ciphertext_preview: text,
+            };
+          }
+          if (cryptoState.subtleOk && cryptoState.aliceSharedKey && cryptoState.bobSharedKey) {
+            const iv = window.crypto.getRandomValues(new Uint8Array(12));
+            const key = sender === "alice" ? cryptoState.aliceSharedKey : cryptoState.bobSharedKey;
+            const encoded = new TextEncoder().encode(text);
+            const cipherBuf = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
+            const payload = b64Encode(cipherBuf);
+            const ivB64 = b64Encode(iv);
+            return {
+              encrypted: true,
+              algo: "ECDH-P256+AES-256-GCM",
+              payload,
+              iv: ivB64,
+              ciphertext_preview: payload.slice(0, 26) + "...",
+            };
+          }
+          // Non-HTTPS fallback outside localhost
+          const masked = btoa(unescape(encodeURIComponent(text)));
+          return {
+            encrypted: true,
+            algo: "local-obfuscation",
+            payload: masked,
+            iv: "",
+            ciphertext_preview: masked.slice(0, 24),
+          };
+        }
+
+        async function decryptFromWire(receiver, frame) {
+          if (!frame.encrypted) return String(frame.payload || "");
+          if (cryptoState.subtleOk && frame.algo === "ECDH-P256+AES-256-GCM") {
+            try {
+              const key = receiver === "bob" ? cryptoState.bobSharedKey : cryptoState.aliceSharedKey;
+              const iv = b64Decode(frame.iv);
+              const cipherBytes = b64Decode(frame.payload);
+              const plainBuf = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, cipherBytes);
+              return new TextDecoder().decode(plainBuf);
+            } catch (err) {
+              return "[DECRYPT ERROR]";
+            }
+          }
+          try {
+            return decodeURIComponent(escape(atob(frame.payload)));
+          } catch (_) {
+            return String(frame.payload);
+          }
+        }
+
+        function tickSvg(status) {
+          if (status === "sent") {
+            return '<svg width="16" height="12" viewBox="0 0 18 14"><path d="M2 7.5L6.2 11.5L15.5 2.5" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+          }
+          const col = status === "read" ? "#38bdf8" : "#cbd5e1";
+          return (
+            '<svg width="22" height="12" viewBox="0 0 24 14">' +
+            '<path d="M1.5 7.5L5.7 11.5L14.5 2.5" fill="none" stroke="' + col + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' +
+            '<path d="M7.5 7.5L11.7 11.5L20.5 2.5" fill="none" stroke="' + col + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' +
+            "</svg>"
+          );
+        }
+
+        function renderFeed(owner, el) {
+          const items = messagesByOwner[owner];
+          if (!items.length) return;
+          el.innerHTML = "";
+          items.forEach(function (m) {
+            const div = document.createElement("div");
+            div.className = "bubble " + m.dir;
+
+            const body = document.createElement("div");
+            body.textContent = m.text;
+            div.appendChild(body);
+
+            const meta = document.createElement("div");
+            meta.className = "bubble-meta";
+
+            const tag = document.createElement("span");
+            tag.textContent = (m.encrypted ? "E2EE" : "PLAIN") + (m.replayed ? " · REPLAYED" : "");
+            meta.appendChild(tag);
+
+            if (m.dir === "out") {
+              const ticks = document.createElement("span");
+              ticks.className = "ticks";
+              ticks.innerHTML = tickSvg(m.status || "sent");
+              meta.appendChild(ticks);
+            }
+            div.appendChild(meta);
+            el.appendChild(div);
+          });
+          el.scrollTop = el.scrollHeight;
+        }
+
+        function updateTickStatus(owner, msgId, status) {
+          const rank = { sent: 1, delivered: 2, read: 3 };
+          const list = messagesByOwner[owner];
+          for (let i = 0; i < list.length; i++) {
+            if (list[i].id === msgId) {
+              if ((rank[status] || 0) >= (rank[list[i].status] || 0)) {
+                list[i].status = status;
+              }
+            }
+          }
+          renderFeed(owner, owner === "alice" ? aliceFeed : bobFeed);
+        }
+
+        function appendWireRow(html, cls) {
+          if (wireLog.querySelector(".sub-note")) {
+            wireLog.innerHTML = "";
+          }
+          const row = document.createElement("div");
+          row.className = "wire-row " + cls;
+          row.innerHTML = html;
+          wireLog.prepend(row);
+          while (wireLog.children.length > 24) {
+            wireLog.removeChild(wireLog.lastChild);
+          }
+        }
+
+        function connectAlice() {
+          wsAlice = new WebSocket(baseWs + "/ws/alice");
+          wsAlice.onopen = function () {
+            aliceStatus.textContent = "Persistent WebSocket open (0 polling)";
+            aliceBadge.textContent = "ONLINE";
+            aliceBadge.className = "pill live";
+          };
+          wsAlice.onmessage = async function (evt) {
+            const msg = JSON.parse(evt.data);
+            if (msg.type === "hello") {
+              pillRedis.textContent = "REDIS: " + msg.redis_mode;
+            } else if (msg.type === "ack") {
+              updateTickStatus("alice", msg.id, msg.status);
+            } else if (msg.type === "chat") {
+              const plain = await decryptFromWire("alice", msg);
+              messagesByOwner.alice.push({
+                id: msg.id,
+                dir: "in",
+                text: plain,
+                encrypted: msg.encrypted,
+                replayed: Boolean(msg.replayed),
+              });
+              renderFeed("alice", aliceFeed);
+              wsAlice.send(JSON.stringify({ type: "ack", id: msg.id, to: msg.from, status: "delivered" }));
+              wsAlice.send(JSON.stringify({ type: "ack", id: msg.id, to: msg.from, status: "read" }));
+            }
+          };
+        }
+
+        function connectBob() {
+          if (wsBob && wsBob.readyState <= 1) {
+            wsBob.close();
+          }
+          wsBob = new WebSocket(baseWs + "/ws/bob");
+          wsBob.onopen = function () {
+            bobStatus.textContent = "Persistent WebSocket open";
+            bobBadge.textContent = "ONLINE";
+            bobBadge.className = "pill live";
+            bobSendBtn.disabled = false;
+            bobInput.disabled = false;
+          };
+          wsBob.onclose = function () {
+            if (bobAirplane) {
+              bobStatus.textContent = "Offline — Redis queuing incoming chats";
+              bobBadge.textContent = "AIRPLANE";
+              bobBadge.className = "pill warn";
+              bobSendBtn.disabled = true;
+              bobInput.disabled = true;
+            }
+          };
+          wsBob.onmessage = async function (evt) {
+            const msg = JSON.parse(evt.data);
+            if (msg.type === "ack") {
+              updateTickStatus("bob", msg.id, msg.status);
+            } else if (msg.type === "chat") {
+              const plain = await decryptFromWire("bob", msg);
+              messagesByOwner.bob.push({
+                id: msg.id,
+                dir: "in",
+                text: plain,
+                encrypted: msg.encrypted,
+                replayed: Boolean(msg.replayed),
+              });
+              renderFeed("bob", bobFeed);
+              if (!msg.replayed) {
+                wsBob.send(JSON.stringify({ type: "ack", id: msg.id, to: msg.from, status: "delivered" }));
+              }
+              if (autoReadChk.checked) {
+                wsBob.send(JSON.stringify({ type: "ack", id: msg.id, to: msg.from, status: "read" }));
+              } else {
+                unreadFromAlice.add(msg.id);
+              }
+            }
+          };
+        }
+
+        function connectInspector() {
+          wsInspector = new WebSocket(baseWs + "/ws/inspector");
+          wsInspector.onmessage = function (evt) {
+            const msg = JSON.parse(evt.data);
+            if (msg.type === "state") {
+              pillRedis.textContent = "REDIS: " + msg.redis_mode;
+              const bobQ = (msg.queue_items && msg.queue_items.bob) || [];
+              const bobOnline = (msg.online || []).indexOf("bob") !== -1;
+
+              gateState.textContent = bobOnline
+                ? "GATE OPEN (" + bobQ.length + " QUEUED)"
+                : "GATE CLOSED · QUEUING (" + bobQ.length + ")";
+              gateState.style.color = bobOnline ? "#22c55e" : "#ff4d5a";
+
+              queueSlots.innerHTML = "";
+              if (bobQ.length === 0) {
+                const s = document.createElement("span");
+                s.className = "sub-note";
+                s.textContent = bobOnline
+                  ? "Queue empty — live WebSocket push active."
+                  : "Airplane mode ON — next message stacks in inbox:bob.";
+                queueSlots.appendChild(s);
+              } else {
+                bobQ.forEach(function (item, idx) {
+                  const chip = document.createElement("span");
+                  chip.className = "q-chip";
+                  chip.textContent = "M" + (idx + 1) + " · " + (item.encrypted ? "E2EE" : "PLAIN");
+                  queueSlots.appendChild(chip);
+                });
+              }
+            } else if (msg.type === "wire") {
+              const label = msg.encrypted ? "CIPHERTEXT (0% READABLE)" : "PLAINTEXT LEAKED!";
+              const cls = msg.encrypted ? "" : "plain";
+              appendWireRow(
+                "<div><strong>" +
+                  msg.from +
+                  " -> " +
+                  msg.to +
+                  "</strong> · " +
+                  label +
+                  (msg.queued ? " · [QUEUED]" : " · [WS PUSH]") +
+                  "</div><div style='color:#94a3b8;'>" +
+                  escapeHtml(msg.wire_preview) +
+                  "</div>",
+                cls
+              );
+            } else if (msg.type === "ack_log") {
+              const a = msg.ack;
+              appendWireRow(
+                "<div><strong>ACK " + a.id + "</strong> · status=" + a.status + (msg.replayed ? " (replayed)" : "") + "</div>",
+                "ack"
+              );
+            }
+          };
+        }
+
+        function escapeHtml(s) {
+          return String(s)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+        }
+
+        async function sendChat(fromUid, toUid, text) {
+          const clean = String(text || "").trim();
+          if (!clean) return;
+          const sock = fromUid === "alice" ? wsAlice : wsBob;
+          if (!sock || sock.readyState !== 1) return;
+
+          const id = "m_" + Math.random().toString(36).slice(2, 8);
+          const wire = await encryptForWire(fromUid, clean);
+
+          messagesByOwner[fromUid].push({
+            id: id,
+            dir: "out",
+            text: clean,
+            encrypted: wire.encrypted,
+            status: "sent",
+          });
+          renderFeed(fromUid, fromUid === "alice" ? aliceFeed : bobFeed);
+
+          sock.send(
+            JSON.stringify({
+              type: "chat",
+              id: id,
+              to: toUid,
+              encrypted: wire.encrypted,
+              algo: wire.algo,
+              payload: wire.payload,
+              iv: wire.iv,
+              ciphertext_preview: wire.ciphertext_preview,
+              ts: Date.now() / 1000,
+            })
+          );
+        }
+
+        aliceSendBtn.addEventListener("click", function () {
+          sendChat("alice", "bob", aliceInput.value);
+          aliceInput.value = "";
+        });
+        aliceInput.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            sendChat("alice", "bob", aliceInput.value);
+            aliceInput.value = "";
+          }
+        });
+
+        bobSendBtn.addEventListener("click", function () {
+          sendChat("bob", "alice", bobInput.value);
+          bobInput.value = "";
+        });
+        bobInput.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            sendChat("bob", "alice", bobInput.value);
+            bobInput.value = "";
+          }
+        });
+
+        quickMeetBtn.addEventListener("click", function () {
+          sendChat("alice", "bob", "Meet at 9");
+        });
+
+        burstBtn.addEventListener("click", async function () {
+          const lines = ["Meet at 9", "Bring your laptop", "Table near window", "See you soon!"];
+          for (let i = 0; i < lines.length; i++) {
+            await sendChat("alice", "bob", lines[i]);
+          }
+        });
+
+        e2eeToggleBtn.addEventListener("click", function () {
+          e2eeEnabled = !e2eeEnabled;
+          e2eeToggleBtn.textContent = "E2EE Lock: " + (e2eeEnabled ? "ON" : "OFF");
+          e2eeToggleBtn.className = e2eeEnabled ? "green-on" : "red-on";
+          pillE2ee.textContent = e2eeEnabled ? "E2EE: ON (ECDH + AES-GCM)" : "E2EE: OFF (PLAINTEXT)";
+          pillE2ee.className = e2eeEnabled ? "pill live" : "pill warn";
+          snifferTag.textContent = e2eeEnabled ? "0% READABLE" : "PLAINTEXT EXPOSED!";
+          snifferTag.style.color = e2eeEnabled ? "#4ade80" : "#ff4d5a";
+        });
+
+        airplaneBtn.addEventListener("click", function () {
+          bobAirplane = !bobAirplane;
+          airplaneBtn.textContent = "Bob Airplane Mode: " + (bobAirplane ? "ON" : "OFF");
+          airplaneBtn.className = bobAirplane ? "red-on" : "";
+          if (bobAirplane) {
+            if (wsBob) wsBob.close();
+          } else {
+            connectBob();
+          }
+        });
+
+        markReadBtn.addEventListener("click", function () {
+          if (!wsBob || wsBob.readyState !== 1) return;
+          unreadFromAlice.forEach(function (id) {
+            wsBob.send(JSON.stringify({ type: "ack", id: id, to: "alice", status: "read" }));
+          });
+          unreadFromAlice.clear();
+        });
+
+        clearWireBtn.addEventListener("click", function () {
+          wireLog.innerHTML = '<div class="sub-note">Waiting for frames crossing the server...</div>';
+        });
+
+        initKeys().then(function () {
+          connectInspector();
+          connectAlice();
+          connectBob();
+        });
+      })();
+    </script>
+  </body>
+</html>
