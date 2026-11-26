@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Main To Scale — Netflix &amp; YouTube Video Streaming Lab</title>
+    <style>
+      :root {
+        --bg: #090d16;
+        --panel: #111827;
+        --panel-soft: #0d1524;
+        --border: #243247;
+        --text: #f8fafc;
+        --muted: #94a3b8;
+        --cyan: #38bdf8;
+        --green: #22c55e;
+        --red: #ff4d5a;
+        --amber: #facc15;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding: 16px;
+        gap: 14px;
+      }
+
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 18px;
+        background: var(--panel);
+        border: 1.5px solid var(--border);
+        border-radius: 14px;
+      }
+
+      .brand { display: flex; align-items: center; gap: 12px; }
+
+      .brand-tag {
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(56, 189, 248, 0.14);
+        border: 1px solid var(--cyan);
+        color: var(--cyan);
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      h1 { font-size: 19px; font-weight: 800; }
+
+      .pills { display: flex; flex-wrap: wrap; gap: 8px; }
+
+      .pill {
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 700;
+        border: 1px solid var(--border);
+        background: var(--panel-soft);
+        color: var(--muted);
+      }
+
+      .pill.live { border-color: var(--green); color: #86efac; background: rgba(34, 197, 94, 0.12); }
+      .pill.cyan { border-color: var(--cyan); color: #bae6fd; background: rgba(56, 189, 248, 0.12); }
+      .pill.warn { border-color: var(--red); color: #fecdd3; background: rgba(255, 77, 90, 0.14); }
+
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(320px, 1.25fr) minmax(300px, 1fr);
+        gap: 14px;
+        flex: 1;
+      }
+
+      @media (max-width: 1020px) { .grid { grid-template-columns: 1fr; } }
+
+      .card {
+        background: var(--panel);
+        border: 1.5px solid var(--border);
+        border-radius: 14px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .card-title {
+        font-size: 14px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #cbd5e1;
+      }
+
+      .player-wrap {
+        position: relative;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1.5px solid var(--border);
+        background: #060a12;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: 240px;
+      }
+
+      .player-hud {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px;
+        background: var(--panel-soft);
+        border-top: 1px solid var(--border);
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+
+      .sig-bars {
+        display: inline-flex;
+        align-items: flex-end;
+        gap: 3px;
+        height: 18px;
+      }
+
+      .sig-bar {
+        width: 5px;
+        border-radius: 2px;
+        background: #1e293b;
+      }
+
+      .buffer-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .buf-slot {
+        padding: 10px;
+        border-radius: 10px;
+        border: 1.5px solid var(--border);
+        background: var(--panel-soft);
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+
+      .buf-slot.active { border-color: var(--green); background: rgba(34, 197, 94, 0.14); color: #86efac; }
+      .buf-slot.queued { border-color: var(--cyan); background: rgba(56, 189, 248, 0.12); color: #bae6fd; }
+      .buf-slot.empty { border-color: #334155; color: #64748b; }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      button, select {
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 700;
+        padding: 8px 12px;
+        border-radius: 9px;
+        border: 1.5px solid var(--border);
+        background: var(--panel-soft);
+        color: var(--text);
+        cursor: pointer;
+      }
+
+      button:hover { border-color: var(--cyan); }
+      button.primary { border-color: var(--cyan); background: rgba(56, 189, 248, 0.15); color: #bae6fd; }
+      button.good { border-color: var(--green); background: rgba(34, 197, 94, 0.15); color: #86efac; }
+      button.danger { border-color: var(--red); background: rgba(255, 77, 90, 0.16); color: #fecdd3; }
+      button.warn { border-color: var(--amber); background: rgba(250, 204, 21, 0.14); color: #fef08a; }
+
+      .meter-box {
+        padding: 12px;
+        border-radius: 10px;
+        border: 1.5px solid var(--border);
+        background: var(--panel-soft);
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .meter-track {
+        height: 12px;
+        border-radius: 999px;
+        background: #1e293b;
+        overflow: hidden;
+      }
+
+      .meter-fill {
+        height: 100%;
+        width: 4%;
+        background: var(--green);
+        transition: width 0.25s ease, background 0.25s ease;
+      }
+
+      .pop-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .pop-card {
+        padding: 10px;
+        border-radius: 10px;
+        border: 1.5px solid var(--border);
+        background: var(--panel-soft);
+        font-family: var(--mono);
+        font-size: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .log-box {
+        background: #070b13;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px;
+        font-family: var(--mono);
+        font-size: 11.5px;
+        line-height: 1.5;
+        max-height: 210px;
+        overflow-y: auto;
+        color: #cbd5e1;
+      }
+
+      .hit { color: #4ade80; font-weight: 700; }
+      .miss { color: #fda4af; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <span class="brand-tag">STREAM KIT</span>
+        <h1>Main To Scale — HLS + ABR + Edge CDN + Prefetch Lab</h1>
+      </div>
+      <div class="pills">
+        <span id="redis-pill" class="pill cyan">Backend: connecting...</span>
+        <span id="hit-pill" class="pill live">Edge Hit Rate: 0%</span>
+        <span id="stall-pill" class="pill live">Stalls: 0</span>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- Left: Live HLS + ABR + Prefetch Client -->
+      <section class="card">
+        <div class="card-head">
+          <span class="card-title">Live HLS Player + Prefetch Playhead</span>
+          <span id="tier-pill" class="pill cyan">1080p · 5 Mbps</span>
+        </div>
+
+        <div class="player-wrap">
+          <canvas id="player-canvas" width="760" height="240"></canvas>
+          <div class="player-hud">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="sig-bars" id="sig-bars">
+                <div class="sig-bar" style="height:5px;"></div>
+                <div class="sig-bar" style="height:8px;"></div>
+                <div class="sig-bar" style="height:11px;"></div>
+                <div class="sig-bar" style="height:14px;"></div>
+                <div class="sig-bar" style="height:18px;"></div>
+              </div>
+              <span id="net-label">5G · 18.0 Mbps</span>
+            </div>
+            <span id="playhead-label">Chunk seg_001.ts (00:00 / 01:00)</span>
+          </div>
+        </div>
+
+        <div class="buffer-row">
+          <div id="slot-now" class="buf-slot active">NOW: seg_001.ts</div>
+          <div id="slot-1" class="buf-slot queued">+1: seg_002.ts</div>
+          <div id="slot-2" class="buf-slot queued">+2: seg_003.ts</div>
+        </div>
+
+        <div class="controls">
+          <select id="net-select" title="Network Bandwidth">
+            <option value="18">5G (18.0 Mbps)</option>
+            <option value="3.2">Tunnel 4G (3.2 Mbps)</option>
+            <option value="1.3">Deep Tunnel 3G (1.3 Mbps)</option>
+            <option value="0">Dead Zone (0 B/s)</option>
+          </select>
+          <select id="region-select" title="Viewer Edge Region">
+            <option value="us">Viewer: US</option>
+            <option value="eu">Viewer: EU</option>
+            <option value="asia">Viewer: ASIA</option>
+          </select>
+          <button id="btn-tunnel" class="warn">Simulate Train Tunnel (5G → 3G → Dead Zone)</button>
+        </div>
+
+        <div class="controls">
+          <button id="btn-abr" class="good">ABR Auto-Switch: ON</button>
+          <button id="btn-prefetch" class="good">Prefetch +2 Buffer: ON</button>
+          <button id="btn-cdn" class="good">Edge CDN (max-age=86400): ON</button>
+          <button id="btn-raw" class="danger">Beat 1: Raw 4 GB main() (10K Viewers)</button>
+        </div>
+
+        <div id="raw-banner" class="meter-box" style="display:none;border-color:var(--red);">
+          <strong style="color:#fecdd3;font-family:var(--mono);font-size:12.5px;">BEAT 1 RAW 4 GB SIMULATION</strong>
+          <span id="raw-output" style="font-family:var(--mono);font-size:12px;color:#fda4af;"></span>
+        </div>
+      </section>
+
+      <!-- Right: Origin + Regional Edge POPs + Live HTTP Headers -->
+      <section class="card">
+        <div class="card-head">
+          <span class="card-title">Global Edge CDN &amp; Origin Health</span>
+          <span id="origin-reqs" class="pill">Origin Reqs: 0</span>
+        </div>
+
+        <div class="meter-box">
+          <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;">
+            <span>ORIGIN SERVER CPU (movie.mp4)</span>
+            <span id="origin-cpu-txt">4%</span>
+          </div>
+          <div class="meter-track">
+            <div id="origin-cpu-bar" class="meter-fill"></div>
+          </div>
+        </div>
+
+        <div class="pop-grid">
+          <div class="pop-card">
+            <strong style="color:var(--cyan);">EDGE · US</strong>
+            <span id="pop-us-hits">Hits: 0 | Miss: 0</span>
+            <span id="pop-us-lat">Latency: 12 ms</span>
+          </div>
+          <div class="pop-card">
+            <strong style="color:var(--cyan);">EDGE · EU</strong>
+            <span id="pop-eu-hits">Hits: 0 | Miss: 0</span>
+            <span id="pop-eu-lat">Latency: 14 ms</span>
+          </div>
+          <div class="pop-card">
+            <strong style="color:var(--cyan);">EDGE · ASIA</strong>
+            <span id="pop-asia-hits">Hits: 0 | Miss: 0</span>
+            <span id="pop-asia-lat">Latency: 16 ms</span>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button id="btn-storm" class="primary">Global Viewer Storm (300 reqs)</button>
+          <button id="btn-purge">Purge Edge Cache</button>
+        </div>
+
+        <div>
+          <div class="card-title" style="margin-bottom:6px;">Live Chunk HTTP Responses</div>
+          <div id="http-log" class="log-box">Waiting for chunk fetches...</div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      (() => {
+        const canvas = document.getElementById("player-canvas");
+        const ctx = canvas.getContext("2d");
+
+        const netSelect = document.getElementById("net-select");
+        const regionSelect = document.getElementById("region-select");
+        const btnTunnel = document.getElementById("btn-tunnel");
+        const btnAbr = document.getElementById("btn-abr");
+        const btnPrefetch = document.getElementById("btn-prefetch");
+        const btnCdn = document.getElementById("btn-cdn");
+        const btnStorm = document.getElementById("btn-storm");
+        const btnPurge = document.getElementById("btn-purge");
+        const btnRaw = document.getElementById("btn-raw");
+
+        let abrEnabled = true;
+        let prefetchEnabled = true;
+        let cdnEnabled = true;
+        let currentTier = "1080p";
+        let currentSegIdx = 1;
+        let nextFetchIdx = 2;
+        let stalls = 0;
+        let isBuffering = false;
+        let tunnelTimer = null;
+        let frameTick = 0;
+
+        const bufferQueue = ["seg_001.ts", "seg_002.ts", "seg_003.ts"];
+        nextFetchIdx = 4;
+
+        function pickTier(mbps) {
+          if (!abrEnabled) return "1080p";
+          if (mbps >= 5) return "1080p";
+          if (mbps >= 2) return "720p";
+          return "480p";
+        }
+
+        function updateSignalBars(mbps) {
+          const bars = document.querySelectorAll("#sig-bars .sig-bar");
+          const lit = mbps >= 10 ? 5 : mbps >= 3 ? 3 : mbps > 0 ? 2 : 0;
+          const color = mbps >= 5 ? "#22c55e" : mbps >= 2 ? "#facc15" : mbps > 0 ? "#fb923c" : "#ff4d5a";
+          bars.forEach((b, i) => {
+            b.style.background = i < lit ? color : "#1e293b";
+          });
+          const label = mbps === 0 ? "DEAD ZONE · 0 B/s" : `${mbps >= 5 ? "5G" : mbps >= 2 ? "4G" : "3G"} · ${mbps.toFixed(1)} Mbps`;
+          document.getElementById("net-label").textContent = label;
+        }
+
+        function updateBufferSlots() {
+          const s0 = document.getElementById("slot-now");
+          const s1 = document.getElementById("slot-1");
+          const s2 = document.getElementById("slot-2");
+          s0.textContent = bufferQueue[0] ? `NOW: ${bufferQueue[0]}` : "NOW: EMPTY (STALLED)";
+          s0.className = "buf-slot " + (bufferQueue[0] ? "active" : "empty");
+          s1.textContent = bufferQueue[1] ? `+1: ${bufferQueue[1]}` : "+1: empty";
+          s1.className = "buf-slot " + (bufferQueue[1] ? "queued" : "empty");
+          s2.textContent = bufferQueue[2] ? `+2: ${bufferQueue[2]}` : "+2: empty";
+          s2.className = "buf-slot " + (bufferQueue[2] ? "queued" : "empty");
+        }
+
+        async function fetchNextChunk() {
+          const mbps = parseFloat(netSelect.value);
+          if (mbps <= 0) return;
+
+          const maxBufferLen = prefetchEnabled ? 3 : 1;
+          while (bufferQueue.length < maxBufferLen) {
+            currentTier = pickTier(mbps);
+            const segNum = ((nextFetchIdx - 1) % 15) + 1;
+            const segName = `seg_${String(segNum).padStart(3, "0")}.ts`;
+            const region = regionSelect.value;
+            const cdnParam = cdnEnabled ? 1 : 0;
+            try {
+              const resp = await fetch(`/hls/${currentTier}/${segName}?region=${region}&cdn=${cdnParam}`);
+              if (resp.ok) {
+                bufferQueue.push(segName);
+                nextFetchIdx += 1;
+              } else {
+                break;
+              }
+            } catch {
+              break;
+            }
+          }
+          updateBufferSlots();
+        }
+
+        // Advance playhead every 1.6s (accelerated 4s chunk demo)
+        setInterval(async () => {
+          const mbps = parseFloat(netSelect.value);
+          updateSignalBars(mbps);
+          currentTier = pickTier(mbps);
+          document.getElementById("tier-pill").textContent = `${currentTier} · ${currentTier === "1080p" ? "5 Mbps" : currentTier === "720p" ? "2.5 Mbps" : "1 Mbps"}`;
+
+          if (bufferQueue.length > 0) {
+            const playing = bufferQueue.shift();
+            currentSegIdx = parseInt(playing.slice(4, 7), 10) || 1;
+            isBuffering = false;
+            document.getElementById("playhead-label").textContent =
+              `Chunk ${playing} (${String((currentSegIdx - 1) * 4).padStart(2, "0")}s / 60s)`;
+          } else {
+            isBuffering = true;
+            stalls += 1;
+            const pill = document.getElementById("stall-pill");
+            pill.textContent = `Stalls: ${stalls}`;
+            pill.className = "pill warn";
+          }
+          updateBufferSlots();
+          await fetchNextChunk();
+        }, 1600);
+
+        // Live Canvas Renderer showing resolution crispness + buffering ring
+        function drawPlayer() {
+          frameTick += 1;
+          const w = canvas.width;
+          const h = canvas.height;
+          ctx.fillStyle = "#060a12";
+          ctx.fillRect(0, 0, w, h);
+
+          const step = currentTier === "1080p" ? 18 : currentTier === "720p" ? 30 : 48;
+          ctx.strokeStyle = currentTier === "1080p" ? "rgba(34,197,94,0.20)" : "rgba(56,189,248,0.20)";
+          ctx.lineWidth = 1;
+          for (let x = 0; x < w; x += step) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+          }
+          for (let y = 0; y < h; y += step) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+          }
+
+          // Animated video waveform
+          ctx.beginPath();
+          for (let x = 0; x <= w; x += 6) {
+            const amp = isBuffering ? 4 : 46;
+            const y = h / 2 + Math.sin((x + frameTick * 4) * 0.025) * amp + Math.cos((x - frameTick * 2) * 0.04) * (amp * 0.45);
+            if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          }
+          ctx.strokeStyle = isBuffering ? "#ff4d5a" : currentTier === "1080p" ? "#22c55e" : "#38bdf8";
+          ctx.lineWidth = currentTier === "1080p" ? 4 : currentTier === "720p" ? 5.5 : 7;
+          ctx.stroke();
+
+          ctx.fillStyle = "#f8fafc";
+          ctx.font = "bold 20px ui-monospace, monospace";
+          ctx.fillText(`STREAMING ${currentTier.toUpperCase()}`, 22, 36);
+
+          if (isBuffering) {
+            ctx.fillStyle = "rgba(9, 13, 22, 0.72)";
+            ctx.fillRect(0, 0, w, h);
+            ctx.strokeStyle = "#facc15";
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            const ang = (frameTick * 0.14) % (Math.PI * 2);
+            ctx.arc(w / 2, h / 2, 28, ang, ang + Math.PI * 1.3);
+            ctx.stroke();
+            ctx.fillStyle = "#ffe4e6";
+            ctx.fillText("BUFFER STARVED — DEAD ZONE", w / 2 - 155, h / 2 + 58);
+          }
+          requestAnimationFrame(drawPlayer);
+        }
+        drawPlayer();
+
+        function applyState(s) {
+          document.getElementById("redis-pill").textContent = `Backend: ${s.redis_mode}`;
+          const hitPill = document.getElementById("hit-pill");
+          hitPill.textContent = `Edge Hit Rate: ${s.hit_rate_pct}%`;
+          hitPill.className = "pill " + (s.hit_rate_pct >= 70 ? "live" : "warn");
+          document.getElementById("origin-reqs").textContent = `Origin Reqs: ${s.origin_requests}`;
+
+          const cpuBar = document.getElementById("origin-cpu-bar");
+          cpuBar.style.width = `${s.origin_cpu_pct}%`;
+          cpuBar.style.background = s.origin_cpu_pct > 65 ? "#ff4d5a" : s.origin_cpu_pct > 30 ? "#facc15" : "#22c55e";
+          document.getElementById("origin-cpu-txt").textContent = `${s.origin_cpu_pct}%`;
+
+          for (const pop of ["us", "eu", "asia"]) {
+            const p = s.pops[pop];
+            document.getElementById(`pop-${pop}-hits`).textContent = `Hits: ${p.hits} | Miss: ${p.misses}`;
+            document.getElementById(`pop-${pop}-lat`).textContent = `Latency: ${p.last_latency_ms} ms`;
+          }
+
+          const logBox = document.getElementById("http-log");
+          if (s.recent_logs && s.recent_logs.length > 0) {
+            logBox.innerHTML = s.recent_logs
+              .map(
+                (entry) =>
+                  `<div>[${entry.pop}] ${entry.path} → <span class="${entry.cache === "HIT" ? "hit" : "miss"}">${entry.cache}</span> (${entry.latency_ms}ms) · ${entry.cache_control}</div>`
+              )
+              .join("");
+          } else {
+            logBox.textContent = "Cache empty — fetch a chunk or trigger Global Viewer Storm.";
+          }
+        }
+
+        // WebSocket live telemetry
+        function connectWs() {
+          const proto = location.protocol === "https:" ? "wss:" : "ws:";
+          const ws = new WebSocket(`${proto}//${location.host}/ws/telemetry`);
+          ws.onmessage = (ev) => {
+            try { applyState(JSON.parse(ev.data)); } catch {}
+          };
+          ws.onclose = () => setTimeout(connectWs, 1500);
+        }
+        connectWs();
+
+        btnAbr.addEventListener("click", () => {
+          abrEnabled = !abrEnabled;
+          btnAbr.textContent = `ABR Auto-Switch: ${abrEnabled ? "ON" : "OFF"}`;
+          btnAbr.className = abrEnabled ? "good" : "danger";
+        });
+
+        btnPrefetch.addEventListener("click", () => {
+          prefetchEnabled = !prefetchEnabled;
+          btnPrefetch.textContent = `Prefetch +2 Buffer: ${prefetchEnabled ? "ON" : "OFF"}`;
+          btnPrefetch.className = prefetchEnabled ? "good" : "danger";
+        });
+
+        btnCdn.addEventListener("click", () => {
+          cdnEnabled = !cdnEnabled;
+          btnCdn.textContent = `Edge CDN (max-age=86400): ${cdnEnabled ? "ON" : "OFF"}`;
+          btnCdn.className = cdnEnabled ? "good" : "danger";
+        });
+
+        btnTunnel.addEventListener("click", () => {
+          if (tunnelTimer) clearTimeout(tunnelTimer);
+          const steps = [
+            { val: "18", delay: 0 },
+            { val: "3.2", delay: 1800 },
+            { val: "1.3", delay: 3600 },
+            { val: "0", delay: 5400 },
+            { val: "18", delay: 8400 },
+          ];
+          steps.forEach((st) => {
+            tunnelTimer = setTimeout(() => {
+              netSelect.value = st.val;
+              updateSignalBars(parseFloat(st.val));
+            }, st.delay);
+          });
+        });
+
+        btnStorm.addEventListener("click", async () => {
+          const resp = await fetch("/api/storm", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ requests: 300, cdn: cdnEnabled }),
+          });
+          if (resp.ok) applyState(await resp.json());
+        });
+
+        btnPurge.addEventListener("click", async () => {
+          const resp = await fetch("/api/cdn/purge", { method: "POST" });
+          if (resp.ok) applyState((await resp.json()).state);
+        });
+
+        btnRaw.addEventListener("click", async () => {
+          const resp = await fetch("/api/raw-play", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ viewers: 10000 }),
+          });
+          if (resp.ok) {
+            const data = await resp.json();
+            document.getElementById("raw-banner").style.display = "flex";
+            document.getElementById("raw-output").textContent =
+              `${data.viewers.toLocaleString()} viewers -> ${data.ram_needed_gb.toLocaleString()} GB RAM needed | ${data.per_viewer_mbps} Mbps each | Wait ${data.estimated_wait_sec}s -> ${data.verdict}`;
+          }
+        });
+
+        updateSignalBars(18);
+        updateBufferSlots();
+      })();
+    </script>
+  </body>
+</html>

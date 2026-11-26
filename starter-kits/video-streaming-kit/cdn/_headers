@@ -1,0 +1,8 @@
+# Edge CDN cache rules
+/*.ts
+  Cache-Control: public, max-age=86400
+  CDN-Cache-Control: max-age=86400
+
+/*.m3u8
+  Cache-Control: public, max-age=10
+  CDN-Cache-Control: max-age=10

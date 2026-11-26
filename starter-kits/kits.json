@@ -48,10 +48,12 @@
     },
     {
       "keyword": "STREAM",
-      "status": "coming_soon",
+      "status": "live",
       "title": "Netflix & YouTube Video Streaming",
       "stack": "Python · HLS 4s Chunking · Adaptive Bitrate (ABR) · Edge CDN · Prefetch Buffer",
-      "path": "./video-streaming-kit/"
+      "path": "./video-streaming-kit/",
+      "zip": "./video-streaming-starter-kit.zip",
+      "cta": "Open Starter Kit →"
     },
     {
       "keyword": "AUDIO",
